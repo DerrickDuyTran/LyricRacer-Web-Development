@@ -1,0 +1,24 @@
+{
+  "name": "lyricracer-web-development",
+  "version": "1.0.0",
+  "description": "Web-based lyric typing game",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DerrickDuyTran/LyricRacer-Web-Development.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DerrickDuyTran/LyricRacer-Web-Development/issues"
+  },
+  "homepage": "https://github.com/DerrickDuyTran/LyricRacer-Web-Development#readme",
+  "dependencies": {
+    "express": "^5.3.0"
+  }
+}
