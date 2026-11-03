@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>LyricRacer</title>
+  <link rel="stylesheet" type="text/css" href="css/style.css">
+</head>
+<body>
+
+<h1>LyricRacer</h1>
+
+<p>Search for a song to load its timestamped lyrics.</p>
+
+<div class="form">
+  <div>
+    <label for="track">Song title:</label>
+    <input id="track" type="text" name="track">
+  </div>
+  <div>
+    <label for="artist">Artist:</label>
+    <input id="artist" type="text" name="artist">
+  </div>
+  <button id="search">Search</button>
+</div>
+
+<div id="message"></div>
+
+<div id="lyrics-section">
+  <h2 id="song-name"></h2>
+  <p id="song-artist"></p>
+  <p id="timer">0:00</p>
+  <p id="current-lyric">Waiting for lyrics...</p>
+  <div id="lyrics"></div>
+</div>
+
+<script src="js/app.js"></script>
+
+</body>
+</html>

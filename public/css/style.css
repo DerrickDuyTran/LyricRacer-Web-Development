@@ -1,0 +1,49 @@
+body {
+  margin: 2rem;
+}
+
+.form {
+  padding: 1rem;
+  margin: 2rem 0;
+  border: 1px solid black;
+}
+
+.form label {
+  font-weight: bold;
+}
+
+.form div {
+  margin: 1rem 0;
+}
+
+#message {
+  margin: 1rem 0;
+}
+
+#timer {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+#current-lyric {
+  padding: 1rem;
+  border: 1px solid black;
+  font-size: 1.5rem;
+}
+
+#lyrics {
+  height: 20rem;
+  overflow-y: scroll;
+  border: 1px solid black;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+#lyrics p {
+  padding: 0.25rem;
+}
+
+#lyrics p.active {
+  background-color: yellow;
+  font-weight: bold;
+}
