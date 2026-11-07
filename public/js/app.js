@@ -103,3 +103,34 @@ document.getElementById("search").addEventListener("click", () => {
     document.getElementById("message").textContent = "Could not load lyrics";
   });
 });
+
+function checkLoginStatus() {
+  fetch("/api/me").then(response => response.json()).then(data => {
+      let account = document.getElementById("account");
+      account.textContent = "";
+
+      if (data.loggedIn) {
+        let username = document.createElement("span");
+        username.textContent = data.user.name;
+        let logout = document.createElement("button");
+        logout.textContent = "Sign Out";
+        logout.addEventListener("click", () => {
+          window.location.href = "/logout";
+        });
+        account.append(username, logout);
+      } else {
+        let signIn = document.createElement("button");
+        signIn.id = "google-sign-in";
+        signIn.textContent = "Sign in with Google";
+        signIn.addEventListener("click", () => {
+          window.location.href = "/auth/google";
+        });
+        account.append(signIn);
+      }
+    })
+    .catch(error => {
+      console.error("Could not check login status:", error);
+    });
+}
+
+checkLoginStatus();
