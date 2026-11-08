@@ -4,6 +4,47 @@ let seconds = 0;
 let timerId;
 let currentIndex = -1;
 let currentText = "";
+let totalCorrect = 0;
+let totalChars = 0;
+
+function countCorrect(typed) {
+  let correct = 0;
+
+  for (let i = 0; i < currentText.length; i++) {
+    if (i < typed.length && typed[i] === currentText[i]) {
+      correct += 1;
+    }
+  }
+
+  return correct;
+}
+
+// Add the finished line to the score
+function scoreLine() {
+  if (currentText === "") {
+    return;
+  }
+
+  let typed = document.getElementById("typing-input").value;
+  totalCorrect += countCorrect(typed);
+  totalChars += Math.max(typed.length, currentText.length);
+}
+
+// Show accuracy for finished lines plus what is typed so far
+function updateAccuracy() {
+  let typed = document.getElementById("typing-input").value;
+  let correct = totalCorrect + countCorrect(typed);
+  let total = totalChars + typed.length;
+  let accuracy = document.getElementById("accuracy");
+
+  if (total === 0) {
+    accuracy.textContent = "Accuracy: --";
+    return;
+  }
+
+  let percent = Math.round(correct / total * 100);
+  accuracy.textContent = "Accuracy: " + percent + "%";
+}
 
 function renderTyping() {
   let typed = document.getElementById("typing-input").value;
@@ -21,13 +62,18 @@ function renderTyping() {
 
     if (i < typed.length) {
       span.className = typed[i] === currentText[i] ? "correct" : "incorrect";
+    } else if (i === typed.length) {
+      span.className = "current";
     }
 
     display.append(span);
   }
+
+  updateAccuracy();
 }
 
 function showCurrentLyric(text) {
+  scoreLine();
   currentText = text;
   document.getElementById("typing-input").value = "";
   renderTyping();
@@ -106,7 +152,10 @@ function startTimer() {
   seconds = 0;
   currentIndex = -1;
   currentText = "";
+  totalCorrect = 0;
+  totalChars = 0;
   document.getElementById("typing-input").value = "";
+  updateAccuracy();
   document.getElementById("current-lyric").textContent =
     "Waiting for lyrics...";
   updateLyrics();
@@ -170,3 +219,27 @@ function checkLoginStatus() {
 checkLoginStatus();
 
 document.getElementById("typing-input").addEventListener("input", renderTyping);
+
+// Only let players type at the end, so mistakes can't be fixed and
+// lyrics can't be pasted in
+document.getElementById("typing-input").addEventListener("beforeinput", event => {
+  let input = event.target;
+  let end = input.value.length;
+  let atEnd = input.selectionStart === end && input.selectionEnd === end;
+  let typing = event.inputType === "insertText" ||
+    event.inputType === "insertCompositionText";
+
+  if (!typing || !atEnd) {
+    event.preventDefault();
+  }
+});
+
+// Keep the cursor at the end after arrow keys or mouse clicks
+function moveCursorToEnd() {
+  let input = document.getElementById("typing-input");
+  input.setSelectionRange(input.value.length, input.value.length);
+}
+
+document.getElementById("typing-input").addEventListener("keydown", moveCursorToEnd);
+document.getElementById("typing-input").addEventListener("keyup", moveCursorToEnd);
+document.getElementById("typing-input").addEventListener("mouseup", moveCursorToEnd);

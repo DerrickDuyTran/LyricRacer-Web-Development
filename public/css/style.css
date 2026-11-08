@@ -25,6 +25,11 @@ body {
   font-weight: bold;
 }
 
+#accuracy {
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
 #current-lyric {
   padding: 1rem;
   border: 1px solid black;
@@ -63,4 +68,15 @@ body {
 #current-lyric .incorrect {
   color: red;
   background-color: #fdd;
+}
+
+#current-lyric .current {
+  border-bottom: 3px solid black;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  50% {
+    border-bottom-color: transparent;
+  }
 }
