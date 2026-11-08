@@ -3,6 +3,35 @@ let lyricParagraphs = [];
 let seconds = 0;
 let timerId;
 let currentIndex = -1;
+let currentText = "";
+
+function renderTyping() {
+  let typed = document.getElementById("typing-input").value;
+  let display = document.getElementById("current-lyric");
+  display.textContent = "";
+
+  if (currentText === "") {
+    display.textContent = "Waiting for lyrics...";
+    return;
+  }
+
+  for (let i = 0; i < currentText.length; i++) {
+    let span = document.createElement("span");
+    span.textContent = currentText[i];
+
+    if (i < typed.length) {
+      span.className = typed[i] === currentText[i] ? "correct" : "incorrect";
+    }
+
+    display.append(span);
+  }
+}
+
+function showCurrentLyric(text) {
+  currentText = text;
+  document.getElementById("typing-input").value = "";
+  renderTyping();
+}
 
 function formatTime(time) {
   let minutes = Math.floor(time / 60);
@@ -24,13 +53,15 @@ function parseLyrics(syncedLyrics) {
 
     if (closingBracketIndex !== -1) {
       let timestamp = line.substring(1, closingBracketIndex);
-      let lyric = line.substring(closingBracketIndex + 1);
+      let lyric = line.substring(closingBracketIndex + 1).trim();
       let timeParts = timestamp.split(":");
 
       let minutes = Number(timeParts[0]);
       let seconds = Number(timeParts[1]);
 
-      lyrics.push({time: minutes * 60 + seconds, text: lyric});
+      if (lyric !== "") {
+        lyrics.push({time: minutes * 60 + seconds, text: lyric});
+      }
     }
   }
 
@@ -51,6 +82,7 @@ function displayLyrics(song) {
   }
 
   document.getElementById("lyrics-section").hidden = false;
+  document.getElementById("typing-input").focus();
   startTimer();
 }
 
@@ -64,7 +96,7 @@ function updateLyrics() {
       lyricParagraphs[currentIndex].classList.remove("active");
     }
     currentIndex = nextIndex;
-    document.getElementById("current-lyric").textContent = lyrics[currentIndex].text;
+    showCurrentLyric(lyrics[currentIndex].text);
     lyricParagraphs[currentIndex].classList.add("active");
   }
 }
@@ -73,6 +105,8 @@ function startTimer() {
   clearInterval(timerId);
   seconds = 0;
   currentIndex = -1;
+  currentText = "";
+  document.getElementById("typing-input").value = "";
   document.getElementById("current-lyric").textContent =
     "Waiting for lyrics...";
   updateLyrics();
@@ -134,3 +168,5 @@ function checkLoginStatus() {
 }
 
 checkLoginStatus();
+
+document.getElementById("typing-input").addEventListener("input", renderTyping);

@@ -47,3 +47,20 @@ body {
   background-color: yellow;
   font-weight: bold;
 }
+
+#typing-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem;
+  margin-top: 1rem;
+  font-size: 1.25rem;
+}
+
+#current-lyric .correct {
+  color: green;
+}
+
+#current-lyric .incorrect {
+  color: red;
+  background-color: #fdd;
+}
