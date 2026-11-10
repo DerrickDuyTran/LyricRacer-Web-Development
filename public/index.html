@@ -1,42 +1,79 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>LyricRacer</title>
   <link rel="stylesheet" type="text/css" href="css/style.css">
 </head>
 <body>
 
-<h1>LyricRacer</h1>
-
-<div id="account">
-  <button id="google-sign-in">Sign in with Google</button>
-</div>
-
-<p>Search for a song to load its timestamped lyrics.</p>
-
-<div class="form">
-  <div>
-    <label for="track">Song title:</label>
-    <input id="track" type="text" name="track">
+<header class="topbar">
+  <a class="brand" href="/" aria-label="LyricRacer home">
+    <span class="brand-mark">LR</span>
+    <span>LyricRacer</span>
+  </a>
+  <div id="account">
+    <button id="google-sign-in" type="button">Sign in with Google</button>
   </div>
-  <div>
-    <label for="artist">Artist:</label>
-    <input id="artist" type="text" name="artist">
-  </div>
-  <button id="search">Search</button>
-</div>
+</header>
 
-<div id="message"></div>
+<main class="page-shell">
+  <section class="search-card" aria-labelledby="search-heading">
+    <h2 id="search-heading">Find a song</h2>
+    <div class="search-fields">
+      <div class="field">
+        <label for="track">Song title</label>
+        <input id="track" type="text" name="track" placeholder="Enter a song title" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="artist">Artist <span>(optional)</span></label>
+        <input id="artist" type="text" name="artist" placeholder="Enter an artist" autocomplete="off">
+      </div>
+      <button id="search" class="primary-button" type="button">Search lyrics</button>
+    </div>
+    <p id="message" role="status" aria-live="polite"></p>
+  </section>
 
-<div id="lyrics-section">
-  <h2 id="song-name"></h2>
-  <p id="song-artist"></p>
-  <p id="timer">0:00</p>
-  <input id="typing-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type the current lyrics here...">
-  <p id="current-lyric">Waiting for lyrics...</p>
-  <div id="lyrics"></div>
-</div>
+  <section id="lyrics-section" class="practice-layout">
+    <div class="practice-column">
+      <article class="panel current-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-label">Current lyric</p>
+            <p class="panel-hint">Type the highlighted line before the next one appears.</p>
+          </div>
+          <div class="timer-actions">
+            <span id="timer">0:00</span>
+          </div>
+        </div>
+
+        <p id="current-lyric" aria-live="polite">Waiting for lyrics...</p>
+
+        <label class="typing-label" for="typing-input">Your typing</label>
+        <input id="typing-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Start typing when the first lyric appears...">
+
+        <div class="stats" aria-label="Typing statistics">
+          <div><span class="stat-label">WPM</span><strong id="wpm">0</strong></div>
+          <div><span class="stat-label">Accuracy</span><strong id="accuracy">0%</strong></div>
+          <div><span class="stat-label">Score</span><strong id="score">0</strong></div>
+        </div>
+      </article>
+    </div>
+
+    <aside class="panel lyrics-panel" aria-labelledby="all-lyrics-heading">
+      <div class="panel-heading">
+        <div>
+          <p class="panel-label">Song lyrics</p>
+          <h2 id="all-lyrics-heading">All lyrics</h2>
+        </div>
+      </div>
+      <div id="lyrics">
+        <p class="empty-state">Search for a song to load its timestamped lyrics.</p>
+      </div>
+    </aside>
+  </section>
+</main>
 
 <script src="js/app.js"></script>
 
