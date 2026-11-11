@@ -20,7 +20,7 @@
   "homepage": "https://github.com/DerrickDuyTran/LyricRacer-Web-Development#readme",
   "dependencies": {
     "axios": "^1.12.2",
-    "dotenv": "^18.0.9",
+    "dotenv": "^18.0.10",
     "express": "^5.3.0",
     "express-session": "^1.19.0",
     "passport": "^0.7.0",
