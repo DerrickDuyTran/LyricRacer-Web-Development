@@ -6,6 +6,70 @@ let currentIndex = -1;
 let currentText = "";
 let audioPlayer;
 let videoPlayer;
+let totalTyped = 0;
+let correctLetters = 0;
+let streak = 0;
+let score = 0;
+let typingSeconds = 0;
+let typingTimerId;
+
+function updateScoreDisplay() {
+  let accuracy = 0;
+  let wpm = 0;
+  let finalScore = 0;
+
+  if (totalTyped > 0) {
+    accuracy = Math.round(correctLetters / totalTyped * 100);
+  }
+
+  if (typingSeconds > 0) {
+    let minutesTyped = typingSeconds / 60;
+    wpm = Math.round(correctLetters / 5 / minutesTyped);
+    finalScore = Math.round(score * (wpm / 10));
+  }
+
+  document.getElementById("wpm").textContent = wpm;
+  document.getElementById("accuracy").textContent = accuracy + "%";
+  document.getElementById("streak").textContent = streak;
+  document.getElementById("score").textContent = finalScore;
+}
+
+function resetScore() {
+  totalTyped = 0;
+  correctLetters = 0;
+  streak = 0;
+  score = 0;
+  clearInterval(typingTimerId);
+  typingTimerId = undefined;
+  typingSeconds = 0;
+  updateScoreDisplay();
+}
+
+function trackTyping(typed) {
+  if (typingTimerId === undefined && typed.length > 0) {
+    typingTimerId = setInterval(() => {
+      typingSeconds++;
+      updateScoreDisplay();
+    }, 1000);
+  }
+
+  let correctTyped = typed.substring(0, typed.length - 1);
+  let newLetter = typed[typed.length - 1];
+  totalTyped++;
+
+  if (newLetter === currentText[correctTyped.length]) {
+    correctLetters++;
+    streak++;
+    score += 10;
+    correctTyped += newLetter;
+  } else {
+    streak = 0;
+    score -= 5;
+  }
+
+  updateScoreDisplay();
+  return correctTyped;
+}
 
 function renderTyping() {
   let typed = document.getElementById("typing-input").value;
@@ -73,6 +137,7 @@ function parseLyrics(syncedLyrics) {
 function displayLyrics(song) {
   lyrics = parseLyrics(song.syncedLyrics);
   lyricParagraphs = [];
+  resetScore();
 
   document.getElementById("lyrics").textContent = "";
 
@@ -95,6 +160,7 @@ function updateLyrics() {
   seconds = audioPlayer.getCurrentTime();
 
   document.getElementById("timer").textContent = formatTime(seconds);
+  updateScoreDisplay();
 
   let nextIndex = currentIndex + 1;
 
@@ -226,12 +292,24 @@ function loadYouTubeVideo(track, artist) {
   });
   }).catch(error => {
     console.error("Could not load YouTube videos:", error);
-    vdocument.getElementById("video-container").textContent = "Could not find videos.";
+    document.getElementById("video-container").textContent = "Could not find videos.";
   });
 }
 
 checkLoginStatus();
-document.getElementById("typing-input").addEventListener("input", renderTyping);
+let typingInput = document.getElementById("typing-input");
+
+typingInput.addEventListener("beforeinput", event => {
+  if (event.inputType !== "insertText") {
+    event.preventDefault();
+  }
+});
+
+typingInput.addEventListener("input", () => {
+  let typed = trackTyping(typingInput.value);
+  typingInput.value = typed;
+  renderTyping();
+});
 const tag = document.createElement("script");
 tag.src = "https://www.youtube.com/iframe_api";
 document.head.appendChild(tag);
