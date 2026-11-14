@@ -4,6 +4,8 @@ let seconds = 0;
 let timerId;
 let currentIndex = -1;
 let currentText = "";
+let audioPlayer;
+let videoPlayer;
 
 function renderTyping() {
   let typed = document.getElementById("typing-input").value;
@@ -87,6 +89,11 @@ function displayLyrics(song) {
 }
 
 function updateLyrics() {
+  if (!audioPlayer || typeof audioPlayer.getCurrentTime !== "function") {
+    return;
+  }
+  seconds = audioPlayer.getCurrentTime();
+
   document.getElementById("timer").textContent = formatTime(seconds);
 
   let nextIndex = currentIndex + 1;
@@ -107,19 +114,13 @@ function startTimer() {
   currentIndex = -1;
   currentText = "";
   document.getElementById("typing-input").value = "";
-  document.getElementById("current-lyric").textContent =
-    "Waiting for lyrics...";
-  updateLyrics();
-
-  timerId = setInterval(() => {
-    seconds += 1;
-    updateLyrics();
-  }, 1000);
+  document.getElementById("current-lyric").textContent = "Waiting for lyrics...";
 }
 
 document.getElementById("search").addEventListener("click", () => {
   let track = document.getElementById("track").value;
-  let artist = document.getElementById("artist").value;
+  let artist = document.getElementById("artist").value
+  loadYouTubeVideo(track, artist);
 
   fetch("/api/lyrics?track=" + track + "&artist=" + artist).then(response => {
     return response.json().then(data => {
@@ -167,6 +168,70 @@ function checkLoginStatus() {
     });
 }
 
-checkLoginStatus();
+function loadYouTubeVideo(track, artist) {
+  let params = new URLSearchParams({track: track, artist: artist});
+  let videoSection = document.getElementById("video-section");
+  videoSection.hidden = false;
 
+  fetch("/api/youtube?" + params.toString())
+    .then(response => {
+      return response.json().then(data => {
+        if (!response.ok) {
+          throw new Error(data.error);
+        }
+        if (audioPlayer) {
+          audioPlayer.destroy();
+        }
+        if (videoPlayer) {
+          videoPlayer.destroy();
+        }
+        audioPlayer = new YT.Player("audio-player", {
+        videoId: data.audioVideoId,
+        playerVars: {
+          autoplay: 1,
+        },
+        events: {
+          onReady: () => {
+            audioPlayer.playVideo();
+          },
+          onStateChange: (event) => {
+            if (event.data === YT.PlayerState.PLAYING) {
+              videoPlayer.playVideo();
+              clearInterval(timerId);
+              updateLyrics();
+              timerId = setInterval(() => {
+                updateLyrics();
+              }, 100);
+            }
+            if (event.data === YT.PlayerState.ENDED) {
+              videoPlayer.stopVideo();
+              clearInterval(timerId);
+            }
+          }
+        }
+      });
+      videoPlayer = new YT.Player("music-video-player", {
+      videoId: data.musicVideoId,
+      playerVars: {
+        autoplay: 0,
+        controls: 0,
+        disablekb: 1,
+      },
+        events: {
+        onReady: () => {
+        videoPlayer.mute();
+      }
+    }
+  });
+  });
+  }).catch(error => {
+    console.error("Could not load YouTube videos:", error);
+    vdocument.getElementById("video-container").textContent = "Could not find videos.";
+  });
+}
+
+checkLoginStatus();
 document.getElementById("typing-input").addEventListener("input", renderTyping);
+const tag = document.createElement("script");
+tag.src = "https://www.youtube.com/iframe_api";
+document.head.appendChild(tag);
