@@ -110,6 +110,53 @@ app.get("/api/lyrics", (req, res) => {
   });
 });
 
+app.get("/api/youtube", async (req, res) => {
+  let track = req.query.track;
+  let artist = req.query.artist || "";
+  let baseQuery = `${track} ${artist}`.trim();
+
+  try {
+    let audioResponse = await axios.get("https://www.googleapis.com/youtube/v3/search", {
+      params: {
+        part: "snippet",
+        q: `${baseQuery} lyrics`,
+        type: "video",
+        maxResults: 1,
+        key: process.env.YOUTUBE_API_KEY
+      }
+    }
+  );
+    let musicResponse = await axios.get("https://www.googleapis.com/youtube/v3/search", {
+      params: {
+        part: "snippet",
+        q: `${baseQuery} music video`,
+        type: "video",
+        maxResults: 1,
+        key: process.env.YOUTUBE_API_KEY
+      }
+    }
+  );
+  let audioVideo = audioResponse.data.items[0];
+  let musicVideo = musicResponse.data.items[0];
+  if (!audioVideo || !musicVideo) {
+    return res.status(404).json({
+      error: "Could not find both YouTube videos"
+    });
+  }
+
+  res.json({
+    audioVideoId: audioVideo.id.videoId,
+    audioTitle: audioVideo.snippet.title,
+    musicVideoId: musicVideo.id.videoId,
+    musicTitle: musicVideo.snippet.title
+  });
+  } catch (error) {
+    console.log("YouTube API error:");
+    console.log(error.response?.data || error.message);
+    res.status(502).json({error: "Could not connect to YouTube"});
+  }
+});
+
 app.listen(port, hostname, () => {
   console.log(`Listening at: http://${hostname}:${port}`);
 });
