@@ -25,7 +25,7 @@ function updateScoreDisplay() {
   if (typingSeconds > 0) {
     let minutesTyped = typingSeconds / 60;
     wpm = Math.round(correctLetters / 5 / minutesTyped);
-    finalScore = Math.round(score * (wpm / 10));
+    finalScore = Math.round(score * (wpm / 10) * (accuracy / 100));
   }
 
   document.getElementById("wpm").textContent = wpm;
