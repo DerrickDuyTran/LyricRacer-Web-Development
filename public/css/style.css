@@ -399,6 +399,55 @@ input:focus {
   text-align: center;
 }
 
+#room-info {
+  margin: 0.8rem 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+#lanes {
+  margin-top: 1rem;
+}
+
+.lane {
+  margin-bottom: 0.9rem;
+}
+
+.lane-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.lane-track {
+  height: 0.65rem;
+  border-radius: 0.35rem;
+  background: #0e1125;
+  overflow: hidden;
+}
+
+.lane-bar {
+  height: 100%;
+  background: var(--primary);
+  transition: width 300ms ease;
+}
+
+.lane.you .lane-label {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.lane.you .lane-bar {
+  background: var(--success);
+}
+
+.lane.empty {
+  opacity: 0.35;
+}
+
 @media (max-width: 850px) {
   .search-fields {
     grid-template-columns: 1fr;
