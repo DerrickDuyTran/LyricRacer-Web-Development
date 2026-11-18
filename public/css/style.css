@@ -343,7 +343,7 @@ input:focus {
   padding-top: 1.1rem;
   border-top: 1px solid var(--border);
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.75rem;
 }
 
@@ -414,6 +414,10 @@ input:focus {
 
   #lyrics {
     height: 20rem;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
