@@ -35,6 +35,24 @@
     <p id="message" role="status" aria-live="polite"></p>
   </section>
 
+  <section id="multiplayer" class="search-card" aria-labelledby="multiplayer-heading">
+    <h2 id="multiplayer-heading">Multiplayer</h2>
+    <div id="join-form" class="search-fields">
+      <div class="field">
+        <label for="player-name">Your name</label>
+        <input id="player-name" type="text" name="player-name" placeholder="Guest" maxlength="20" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="room-code">Room code <span>(blank to create)</span></label>
+        <input id="room-code" type="text" name="room-code" placeholder="ABCD" maxlength="4" autocomplete="off">
+      </div>
+      <button id="join" class="primary-button" type="button">Join</button>
+    </div>
+    <p id="room-info" role="status" aria-live="polite"></p>
+    <button id="start-game" class="secondary-button" type="button" hidden>Start Game</button>
+    <div id="lanes"></div>
+  </section>
+
   <section id="video-section" class="video-section">
     <div class="panel">
       <div id="video-container">
