@@ -5,7 +5,6 @@ let timerId;
 let currentIndex = -1;
 let currentText = "";
 let audioPlayer;
-let videoPlayer;
 let totalTyped = 0;
 let correctLetters = 0;
 let streak = 0;
@@ -15,6 +14,8 @@ let typingTimerId;
 let socket;
 let lastSent = 0;
 let joined = false;
+const playbackSpeeds = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+let playbackSpeedIndex = 3;
 
 function updateScoreDisplay() {
   let accuracy = 0;
@@ -28,7 +29,7 @@ function updateScoreDisplay() {
   if (typingSeconds > 0) {
     let minutesTyped = typingSeconds / 60;
     wpm = Math.round(correctLetters / 5 / minutesTyped);
-    finalScore = Math.round(score * (wpm / 10) * (accuracy / 100));
+    finalScore = Math.round(score * (wpm / 10) * (accuracy / 100) * playbackSpeeds[playbackSpeedIndex]);
   }
 
   document.getElementById("wpm").textContent = wpm;
@@ -143,6 +144,8 @@ function displayLyrics(song) {
   lyricParagraphs = [];
   resetScore();
 
+  lockPlaybackSpeed();
+
   document.getElementById("lyrics").textContent = "";
 
   for (let lyric of lyrics) {
@@ -193,14 +196,13 @@ function loadSong(track, artist) {
     return;
   }
 
-  loadYouTubeVideo(track, artist);
-
   let params = new URLSearchParams({track: track, artist: artist});
 
   fetch("/api/lyrics?" + params.toString()).then(response => {
     return response.json().then(data => {
       if (response.status === 200) {
         document.getElementById("message").textContent = "Lyrics loaded";
+        loadYouTubeVideo(track, artist);
         displayLyrics(data);
       } else {
         clearInterval(timerId);
@@ -252,8 +254,6 @@ function checkLoginStatus() {
 
 function loadYouTubeVideo(track, artist) {
   let params = new URLSearchParams({track: track, artist: artist});
-  let videoSection = document.getElementById("video-section");
-  videoSection.hidden = false;
 
   fetch("/api/youtube?" + params.toString())
     .then(response => {
@@ -264,9 +264,6 @@ function loadYouTubeVideo(track, artist) {
         if (audioPlayer) {
           audioPlayer.destroy();
         }
-        if (videoPlayer) {
-          videoPlayer.destroy();
-        }
         audioPlayer = new YT.Player("audio-player", {
         videoId: data.audioVideoId,
         playerVars: {
@@ -274,11 +271,11 @@ function loadYouTubeVideo(track, artist) {
         },
         events: {
           onReady: () => {
+            audioPlayer.setPlaybackRate(playbackSpeeds[playbackSpeedIndex]);
             audioPlayer.playVideo();
           },
           onStateChange: (event) => {
             if (event.data === YT.PlayerState.PLAYING) {
-              videoPlayer.playVideo();
               clearInterval(timerId);
               updateLyrics();
               timerId = setInterval(() => {
@@ -286,32 +283,47 @@ function loadYouTubeVideo(track, artist) {
               }, 100);
             }
             if (event.data === YT.PlayerState.ENDED) {
-              videoPlayer.stopVideo();
               clearInterval(timerId);
               sendFinish();
             }
           }
         }
       });
-      videoPlayer = new YT.Player("music-video-player", {
-      videoId: data.musicVideoId,
-      playerVars: {
-        autoplay: 0,
-        controls: 0,
-        disablekb: 1,
-      },
-        events: {
-        onReady: () => {
-        videoPlayer.mute();
-      }
-    }
-  });
-  });
+    });
   }).catch(error => {
     console.error("Could not load YouTube videos:", error);
     document.getElementById("video-container").textContent = "Could not find videos.";
   });
 }
+
+function lockPlaybackSpeed() {
+  document.getElementById("speed-down").disabled = true;
+  document.getElementById("speed-up").disabled = true;
+}
+
+function updatePlaybackSpeed() {
+  let speed = playbackSpeeds[playbackSpeedIndex];
+
+  document.getElementById("playback-speed").textContent = speed + "x";
+
+  if (audioPlayer && typeof audioPlayer.setPlaybackRate === "function") {
+    audioPlayer.setPlaybackRate(speed);
+  }
+}
+
+document.getElementById("speed-down").addEventListener("click", () => {
+  if (playbackSpeedIndex > 0) {
+    playbackSpeedIndex--;
+    updatePlaybackSpeed();
+  }
+});
+
+document.getElementById("speed-up").addEventListener("click", () => {
+  if (playbackSpeedIndex < playbackSpeeds.length - 1) {
+    playbackSpeedIndex++;
+    updatePlaybackSpeed();
+  }
+});
 
 function renderRoom(room) {
   let isHost = room.you === 0;

@@ -134,29 +134,16 @@ app.get("/api/youtube", async (req, res) => {
       }
     }
   );
-    let musicResponse = await axios.get("https://www.googleapis.com/youtube/v3/search", {
-      params: {
-        part: "snippet",
-        q: `${baseQuery} music video`,
-        type: "video",
-        maxResults: 1,
-        key: process.env.YOUTUBE_API_KEY
-      }
-    }
-  );
   let audioVideo = audioResponse.data.items[0];
-  let musicVideo = musicResponse.data.items[0];
-  if (!audioVideo || !musicVideo) {
+  if (!audioVideo) {
     return res.status(404).json({
-      error: "Could not find both YouTube videos"
+      error: "Could not find YouTube videos"
     });
   }
 
   res.json({
     audioVideoId: audioVideo.id.videoId,
     audioTitle: audioVideo.snippet.title,
-    musicVideoId: musicVideo.id.videoId,
-    musicTitle: musicVideo.snippet.title
   });
   } catch (error) {
     console.log("YouTube API error:");
