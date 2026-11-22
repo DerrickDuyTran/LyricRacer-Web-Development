@@ -14,11 +14,55 @@ let typingTimerId;
 let finalScore = 0;
 let track = "";
 let scoreSaved = false;
+let songEnded = false;
 let socket;
 let lastSent = 0;
 let joined = false;
 const playbackSpeeds = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 let playbackSpeedIndex = 3;
+
+function showView(name) {
+  let views = ["home", "lobby", "race"];
+
+  for (let view of views) {
+    document.getElementById(view + "-view").hidden = view !== name;
+  }
+}
+
+function openDialog(id) {
+  let dialog = document.getElementById(id);
+
+  if (!dialog.open) {
+    dialog.showModal();
+  }
+}
+
+function closeDialogs() {
+  for (let dialog of document.querySelectorAll("dialog")) {
+    dialog.close();
+  }
+}
+
+function openSongDialog() {
+  document.getElementById("message").textContent = "";
+
+  if (joined) {
+    document.getElementById("search-heading").textContent = "Pick the race song";
+    document.getElementById("search").textContent = "Start race";
+  } else {
+    document.getElementById("search-heading").textContent = "Find a song";
+    document.getElementById("search").textContent = "Search lyrics";
+  }
+
+  openDialog("song-dialog");
+  document.getElementById("track").focus();
+}
+
+function openJoinDialog() {
+  document.getElementById("join-message").textContent = "";
+  openDialog("join-dialog");
+  document.getElementById("player-name").focus();
+}
 
 function updateScoreDisplay() {
   let accuracy = 0;
@@ -71,16 +115,31 @@ function saveScore() {
   }).then(response => {
     return response.json().then(data => {
       if (response.status === 200) {
-        document.getElementById("message").textContent = "Score saved";
+        document.getElementById("results-message").textContent = "Score saved";
       } else {
         scoreSaved = false;
-        document.getElementById("message").textContent = data.error;
+        document.getElementById("results-message").textContent = data.error;
       }
     });
   }).catch(error => {
     scoreSaved = false;
-    document.getElementById("message").textContent = "Could not save score";
+    document.getElementById("results-message").textContent = "Could not save score";
   });
+}
+
+function showResults() {
+  document.getElementById("result-wpm").textContent = document.getElementById("wpm").textContent;
+  document.getElementById("result-accuracy").textContent = document.getElementById("accuracy").textContent;
+  document.getElementById("result-score").textContent = document.getElementById("score").textContent;
+  document.getElementById("results-message").textContent = "";
+
+  if (joined) {
+    document.getElementById("results-next").textContent = "Back to lobby";
+  } else {
+    document.getElementById("results-next").textContent = "Choose another song";
+  }
+
+  openDialog("results-dialog");
 }
 
 function trackTyping(typed) {
@@ -175,6 +234,7 @@ function parseLyrics(syncedLyrics) {
 function displayLyrics(song) {
   lyrics = parseLyrics(song.syncedLyrics);
   lyricParagraphs = [];
+  songEnded = false;
   resetScore();
 
   lockPlaybackSpeed();
@@ -188,7 +248,10 @@ function displayLyrics(song) {
     lyricParagraphs.push(paragraph);
   }
 
-  document.getElementById("lyrics-section").hidden = false;
+  closeDialogs();
+  showView("race");
+  updateLeaveButton();
+  document.getElementById("race-message").textContent = "Loading song audio...";
   document.getElementById("typing-input").focus();
   startTimer();
 }
@@ -219,42 +282,85 @@ function startTimer() {
   seconds = 0;
   currentIndex = -1;
   currentText = "";
+  document.getElementById("timer").textContent = "0:00";
   document.getElementById("typing-input").value = "";
   document.getElementById("typing-input").disabled = false;
   document.getElementById("current-lyric").textContent = "Waiting for lyrics...";
 }
 
-function loadSong(songTitle, artist) {
+function stopSong() {
+  clearInterval(timerId);
+  clearInterval(typingTimerId);
+  typingTimerId = undefined;
+  destroyAudioPlayer();
+  lyrics = [];
+  lyricParagraphs = [];
+  currentIndex = -1;
+  currentText = "";
+  unlockPlaybackSpeed();
+}
+
+function loadSong(songTitle, artist, messageId) {
+  let message = document.getElementById(messageId);
+
   if (songTitle.trim() === "") {
-    document.getElementById("message").textContent = "Enter a song title";
+    message.textContent = "Enter a song title";
     return;
   }
 
   track = songTitle;
+  message.textContent = "Loading lyrics...";
   let params = new URLSearchParams({track: songTitle, artist: artist});
 
   fetch("/api/lyrics?" + params.toString()).then(response => {
     return response.json().then(data => {
       if (response.status === 200) {
-        document.getElementById("message").textContent = "Lyrics loaded";
+        message.textContent = "";
         loadYouTubeVideo(track, artist);
         displayLyrics(data);
       } else {
         clearInterval(timerId);
-        document.getElementById("message").textContent = data.error;
-        document.getElementById("lyrics-section").hidden = true;
+        message.textContent = data.error;
       }
     });
   }).catch(error => {
     clearInterval(timerId);
-    document.getElementById("message").textContent = "Could not load lyrics";
+    message.textContent = "Could not load lyrics";
+  });
+}
+
+function startRace(songTitle, artist) {
+  let message = document.getElementById("message");
+  let params = new URLSearchParams({track: songTitle, artist: artist});
+  message.textContent = "Checking lyrics...";
+
+  fetch("/api/lyrics?" + params.toString()).then(response => {
+    return response.json().then(data => {
+      if (response.status === 200) {
+        message.textContent = "";
+        socket.send(JSON.stringify({
+          type: "start",
+          track: songTitle,
+          artist: artist
+        }));
+      } else {
+        message.textContent = data.error;
+      }
+    });
+  }).catch(error => {
+    message.textContent = "Could not load lyrics";
   });
 }
 
 document.getElementById("search").addEventListener("click", () => {
   let track = document.getElementById("track").value;
   let artist = document.getElementById("artist").value;
-  loadSong(track, artist);
+
+  if (joined) {
+    startRace(track, artist);
+  } else {
+    loadSong(track, artist, "message");
+  }
 });
 
 function checkLoginStatus() {
@@ -287,6 +393,19 @@ function checkLoginStatus() {
     });
 }
 
+function destroyAudioPlayer() {
+  if (audioPlayer) {
+    audioPlayer.destroy();
+    audioPlayer = undefined;
+  }
+
+  if (!document.getElementById("audio-player")) {
+    let player = document.createElement("div");
+    player.id = "audio-player";
+    document.getElementById("audio-container").append(player);
+  }
+}
+
 function loadYouTubeVideo(track, artist) {
   let params = new URLSearchParams({track: track, artist: artist});
 
@@ -296,9 +415,7 @@ function loadYouTubeVideo(track, artist) {
         if (!response.ok) {
           throw new Error(data.error);
         }
-        if (audioPlayer) {
-          audioPlayer.destroy();
-        }
+        destroyAudioPlayer();
         audioPlayer = new YT.Player("audio-player", {
         videoId: data.audioVideoId,
         playerVars: {
@@ -311,6 +428,7 @@ function loadYouTubeVideo(track, artist) {
           },
           onStateChange: (event) => {
             if (event.data === YT.PlayerState.PLAYING) {
+              document.getElementById("race-message").textContent = "";
               clearInterval(timerId);
               updateLyrics();
               timerId = setInterval(() => {
@@ -322,7 +440,10 @@ function loadYouTubeVideo(track, artist) {
               clearInterval(typingTimerId);
               typingTimerId = undefined;
               typingInput.disabled = true;
+              songEnded = true;
+              updateLeaveButton();
               updateScoreDisplay();
+              showResults();
               saveScore();
               sendFinish();
             }
@@ -332,57 +453,66 @@ function loadYouTubeVideo(track, artist) {
     });
   }).catch(error => {
     console.error("Could not load YouTube videos:", error);
-    document.getElementById("video-container").textContent = "Could not find videos.";
+    document.getElementById("race-message").textContent = "Could not load the song audio.";
   });
 }
 
 function lockPlaybackSpeed() {
-  document.getElementById("speed-down").disabled = true;
-  document.getElementById("speed-up").disabled = true;
+  for (let button of document.querySelectorAll(".speed-down, .speed-up")) {
+    button.disabled = true;
+  }
+}
+
+function unlockPlaybackSpeed() {
+  for (let button of document.querySelectorAll(".speed-down, .speed-up")) {
+    button.disabled = false;
+  }
 }
 
 function updatePlaybackSpeed() {
   let speed = playbackSpeeds[playbackSpeedIndex];
 
-  document.getElementById("playback-speed").textContent = speed + "x";
+  for (let label of document.querySelectorAll(".playback-speed")) {
+    label.textContent = speed + "x";
+  }
 
   if (audioPlayer && typeof audioPlayer.setPlaybackRate === "function") {
     audioPlayer.setPlaybackRate(speed);
   }
 }
 
-document.getElementById("speed-down").addEventListener("click", () => {
-  if (playbackSpeedIndex > 0) {
-    playbackSpeedIndex--;
-    updatePlaybackSpeed();
+for (let button of document.querySelectorAll(".speed-down")) {
+  button.addEventListener("click", () => {
+    if (playbackSpeedIndex > 0) {
+      playbackSpeedIndex--;
+      updatePlaybackSpeed();
+    }
+  });
+}
+
+for (let button of document.querySelectorAll(".speed-up")) {
+  button.addEventListener("click", () => {
+    if (playbackSpeedIndex < playbackSpeeds.length - 1) {
+      playbackSpeedIndex++;
+      updatePlaybackSpeed();
+    }
+  });
+}
+
+function updateLeaveButton() {
+  let button = document.getElementById("leave-race");
+
+  if (!joined) {
+    button.textContent = "Back to menu";
+  } else if (songEnded) {
+    button.textContent = "Back to lobby";
+  } else {
+    button.textContent = "Leave room";
   }
-});
+}
 
-document.getElementById("speed-up").addEventListener("click", () => {
-  if (playbackSpeedIndex < playbackSpeeds.length - 1) {
-    playbackSpeedIndex++;
-    updatePlaybackSpeed();
-  }
-});
-
-function renderRoom(room) {
-  let isHost = room.you === 0;
-  let info = "Room code: " + room.code + " (" + room.players.length + "/4 players)";
-
-  if (room.status === "finished") {
-    info += " - Race finished!";
-  } else if (room.status === "lobby" && isHost) {
-    info += " - Enter a song above, then click Start Game.";
-  } else if (room.status === "lobby") {
-    info += " - Waiting for the host to start...";
-  }
-
-  document.getElementById("room-info").textContent = info;
-  document.getElementById("join-form").hidden = true;
-  document.getElementById("search").disabled = true;
-  document.getElementById("start-game").hidden = !(isHost && room.status !== "playing");
-
-  let lanes = document.getElementById("lanes");
+function renderLanes(containerId, room) {
+  let lanes = document.getElementById(containerId);
   lanes.textContent = "";
 
   for (let i = 0; i < 4; i++) {
@@ -422,6 +552,29 @@ function renderRoom(room) {
   }
 }
 
+function renderRoom(room) {
+  let isHost = room.you === 0;
+  let info = room.players.length + "/4 players";
+
+  if (room.status === "finished") {
+    info += " - Race finished!";
+  } else if (room.status === "playing") {
+    info += " - Race in progress";
+  } else if (isHost) {
+    info += " - Click Choose song and start when everyone is in.";
+  } else {
+    info += " - Waiting for the host to start...";
+  }
+
+  document.getElementById("lobby-code").textContent = room.code;
+  document.getElementById("room-info").textContent = info;
+  document.getElementById("start-game").hidden = !(isHost && room.status !== "playing");
+  document.getElementById("race-room").hidden = false;
+
+  renderLanes("lobby-lanes", room);
+  renderLanes("race-lanes", room);
+}
+
 function connect() {
   if (socket) {
     return;
@@ -448,31 +601,42 @@ function connect() {
     let msg = JSON.parse(event.data);
 
     if (msg.type === "room") {
-      joined = true;
+      if (!joined) {
+        joined = true;
+        closeDialogs();
+        showView("lobby");
+        document.getElementById("lobby-message").textContent = "";
+      }
       renderRoom(msg);
     } else if (msg.type === "start") {
       document.getElementById("track").value = msg.track;
       document.getElementById("artist").value = msg.artist;
-      loadSong(msg.track, msg.artist);
+      loadSong(msg.track, msg.artist, "lobby-message");
     } else if (msg.type === "error") {
-      document.getElementById("room-info").textContent = msg.error;
-
-      if (!joined) {
+      if (joined) {
+        document.getElementById("lobby-message").textContent = msg.error;
+      } else {
+        document.getElementById("join-message").textContent = msg.error;
         socket.close();
       }
     }
   });
 
   socket.addEventListener("close", () => {
+    let wasJoined = joined;
     socket = undefined;
     joined = false;
-    document.getElementById("join-form").hidden = false;
-    document.getElementById("start-game").hidden = true;
-    document.getElementById("search").disabled = false;
+    document.getElementById("race-room").hidden = true;
+
+    if (wasJoined) {
+      stopSong();
+      closeDialogs();
+      showView("home");
+    }
   });
 
   socket.addEventListener("error", () => {
-    document.getElementById("room-info").textContent = "Could not connect to the server";
+    document.getElementById("join-message").textContent = "Could not connect to the server";
   });
 }
 
@@ -502,18 +666,66 @@ function sendFinish() {
   }
 }
 
+document.getElementById("open-solo").addEventListener("click", openSongDialog);
+document.getElementById("open-join").addEventListener("click", openJoinDialog);
+document.getElementById("start-game").addEventListener("click", openSongDialog);
 document.getElementById("join").addEventListener("click", connect);
-document.getElementById("start-game").addEventListener("click", () => {
-  if (document.getElementById("track").value.trim() === "") {
-    document.getElementById("room-info").textContent = "Enter a song title in Find a song, then click Start game.";
-    return;
-  }
-  socket.send(JSON.stringify({
-    type: "start",
-    track: document.getElementById("track").value,
-    artist: document.getElementById("artist").value
-  }));
+
+document.getElementById("song-close").addEventListener("click", () => {
+  document.getElementById("song-dialog").close();
 });
+
+document.getElementById("join-close").addEventListener("click", () => {
+  document.getElementById("join-dialog").close();
+});
+
+document.getElementById("results-close").addEventListener("click", () => {
+  document.getElementById("results-dialog").close();
+});
+
+document.getElementById("results-next").addEventListener("click", () => {
+  stopSong();
+  closeDialogs();
+
+  if (joined) {
+    showView("lobby");
+  } else {
+    showView("home");
+    openSongDialog();
+  }
+});
+
+document.getElementById("leave-room").addEventListener("click", () => {
+  socket.close();
+});
+
+document.getElementById("leave-race").addEventListener("click", () => {
+  if (!joined) {
+    stopSong();
+    showView("home");
+  } else if (songEnded) {
+    stopSong();
+    showView("lobby");
+  } else {
+    socket.close();
+  }
+});
+
+for (let id of ["track", "artist"]) {
+  document.getElementById(id).addEventListener("keydown", event => {
+    if (event.key === "Enter" && !document.getElementById("search").disabled) {
+      document.getElementById("search").click();
+    }
+  });
+}
+
+for (let id of ["player-name", "room-code"]) {
+  document.getElementById(id).addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      connect();
+    }
+  });
+}
 
 checkLoginStatus();
 let typingInput = document.getElementById("typing-input");
@@ -532,11 +744,7 @@ typingInput.addEventListener("input", () => {
 
 function updateButtons() {
   let hasTitle = document.getElementById("track").value.trim() !== "";
-  document.getElementById("start-game").disabled = !hasTitle;
-
-  if (!socket) {
-    document.getElementById("search").disabled = !hasTitle;
-  }
+  document.getElementById("search").disabled = !hasTitle;
 }
 document.getElementById("track").addEventListener("input", updateButtons);
 updateButtons();

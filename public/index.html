@@ -19,46 +19,60 @@
 </header>
 
 <main class="page-shell">
-  <section class="search-card" aria-labelledby="search-heading">
-    <h2 id="search-heading">Find a song</h2>
-    <div class="search-fields">
-      <div class="field">
-        <label for="track">Song title</label>
-        <input id="track" type="text" name="track" placeholder="Enter a song title" autocomplete="off">
-      </div>
-      <div class="field">
-        <label for="artist">Artist <span>(optional)</span></label>
-        <input id="artist" type="text" name="artist" placeholder="Enter an artist" autocomplete="off">
-      </div>
-      <button id="search" class="primary-button" type="button">Search lyrics</button>
+  <section id="home-view" class="view" aria-labelledby="home-heading">
+    <div class="page-heading">
+      <p class="eyebrow">Lyric typing game</p>
+      <h1 id="home-heading">Type every line before the next one hits.</h1>
+      <p class="page-description">Practice a song on your own, or race up to three friends in a room.</p>
     </div>
-    <div class="playback-controls">
-      <button id="speed-down" type="button">-</button>
-      <span id="playback-speed">1.0x</span>
-      <button id="speed-up" type="button">+</button>
+
+    <div class="mode-grid">
+      <article class="search-card mode-card">
+        <p class="panel-label">Solo</p>
+        <h2>Practice a song</h2>
+        <p class="panel-hint">Search any song with timed lyrics and type along at your own speed.</p>
+        <button id="open-solo" class="primary-button" type="button">Choose a song</button>
+      </article>
+
+      <article class="search-card mode-card">
+        <p class="panel-label">Multiplayer</p>
+        <h2>Race your friends</h2>
+        <p class="panel-hint">Create a room, or join one with its 4-letter code. Up to 4 players.</p>
+        <button id="open-join" class="primary-button" type="button">Join a room</button>
+      </article>
     </div>
-    <p id="message" role="status" aria-live="polite"></p>
   </section>
 
-  <section id="multiplayer" class="search-card" aria-labelledby="multiplayer-heading">
-    <h2 id="multiplayer-heading">Multiplayer</h2>
-    <div id="join-form" class="search-fields">
-      <div class="field">
-        <label for="player-name">Your name</label>
-        <input id="player-name" type="text" name="player-name" placeholder="Guest" maxlength="20" autocomplete="off">
+  <section id="lobby-view" class="view" aria-labelledby="lobby-code" hidden>
+    <div class="search-card lobby-card">
+      <div class="panel-heading">
+        <div>
+          <p class="panel-label">Room code</p>
+          <h2 id="lobby-code">----</h2>
+        </div>
+        <button id="leave-room" class="secondary-button" type="button">Leave room</button>
       </div>
-      <div class="field">
-        <label for="room-code">Room code <span>(blank to create)</span></label>
-        <input id="room-code" type="text" name="room-code" placeholder="ABCD" maxlength="4" autocomplete="off">
+      <p id="room-info" role="status" aria-live="polite"></p>
+      <div id="lobby-lanes" class="lanes"></div>
+      <div class="lobby-actions">
+        <div class="playback-controls">
+          <span class="stat-label">Speed</span>
+          <button class="speed-down" type="button" aria-label="Slower">-</button>
+          <span class="playback-speed">1x</span>
+          <button class="speed-up" type="button" aria-label="Faster">+</button>
+        </div>
+        <button id="start-game" class="primary-button" type="button" hidden>Choose song and start</button>
       </div>
-      <button id="join" class="primary-button" type="button">Join</button>
+      <p id="lobby-message" class="status-message" role="status" aria-live="polite"></p>
     </div>
-    <p id="room-info" role="status" aria-live="polite"></p>
-    <button id="start-game" class="secondary-button" type="button" hidden>Start Game</button>
-    <div id="lanes"></div>
   </section>
 
-  <section id="lyrics-section" class="practice-layout">
+  <section id="race-view" class="view practice-layout" hidden>
+    <div class="race-toolbar">
+      <button id="leave-race" class="secondary-button" type="button">Back to menu</button>
+      <p id="race-message" class="status-message" role="status" aria-live="polite"></p>
+    </div>
+
     <div class="practice-column">
       <article class="panel current-panel">
         <div class="panel-heading">
@@ -83,6 +97,11 @@
           <div><span class="stat-label">Score</span><strong id="score">0</strong></div>
         </div>
       </article>
+
+      <article id="race-room" class="panel" hidden>
+        <p class="panel-label">Race</p>
+        <div id="race-lanes" class="lanes"></div>
+      </article>
     </div>
 
     <aside class="panel lyrics-panel" aria-labelledby="all-lyrics-heading">
@@ -96,11 +115,80 @@
         <p class="empty-state">Search for a song to load its timestamped lyrics.</p>
       </div>
     </aside>
-    <div id="audio-container">
-        <div id="audio-player"></div>
-    </div>
   </section>
 </main>
+
+<dialog id="song-dialog" class="modal" aria-labelledby="search-heading">
+  <div class="modal-heading">
+    <h2 id="search-heading">Find a song</h2>
+    <button id="song-close" class="close-button" type="button" aria-label="Close">&times;</button>
+  </div>
+  <div class="search-fields">
+    <div class="field">
+      <label for="track">Song title</label>
+      <input id="track" type="text" name="track" placeholder="Enter a song title" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="artist">Artist <span>(optional)</span></label>
+      <input id="artist" type="text" name="artist" placeholder="Enter an artist" autocomplete="off">
+    </div>
+  </div>
+  <div class="modal-actions">
+    <div class="playback-controls">
+      <span class="stat-label">Speed</span>
+      <button class="speed-down" type="button" aria-label="Slower">-</button>
+      <span class="playback-speed">1x</span>
+      <button class="speed-up" type="button" aria-label="Faster">+</button>
+    </div>
+    <button id="search" class="primary-button" type="button">Search lyrics</button>
+  </div>
+  <p id="message" class="status-message" role="status" aria-live="polite"></p>
+</dialog>
+
+<dialog id="join-dialog" class="modal" aria-labelledby="join-heading">
+  <div class="modal-heading">
+    <h2 id="join-heading">Join a room</h2>
+    <button id="join-close" class="close-button" type="button" aria-label="Close">&times;</button>
+  </div>
+  <div class="search-fields">
+    <div class="field">
+      <label for="player-name">Your name</label>
+      <input id="player-name" type="text" name="player-name" placeholder="Guest" maxlength="20" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="room-code">Room code <span>(blank to create)</span></label>
+      <input id="room-code" type="text" name="room-code" placeholder="ABCD" maxlength="4" autocomplete="off">
+    </div>
+  </div>
+  <div class="modal-actions">
+    <span></span>
+    <button id="join" class="primary-button" type="button">Join</button>
+  </div>
+  <p id="join-message" class="status-message" role="status" aria-live="polite"></p>
+</dialog>
+
+<dialog id="results-dialog" class="modal" aria-labelledby="results-heading">
+  <div class="modal-heading">
+    <div>
+      <p class="panel-label">Song finished</p>
+      <h2 id="results-heading">Your results</h2>
+    </div>
+    <button id="results-close" class="close-button" type="button" aria-label="Close">&times;</button>
+  </div>
+  <div class="stats results-stats">
+    <div><span class="stat-label">WPM</span><strong id="result-wpm">0</strong></div>
+    <div><span class="stat-label">Accuracy</span><strong id="result-accuracy">0%</strong></div>
+    <div><span class="stat-label">Score</span><strong id="result-score">0</strong></div>
+  </div>
+  <div class="modal-actions">
+    <p id="results-message" class="status-message" role="status" aria-live="polite"></p>
+    <button id="results-next" class="primary-button" type="button">Choose another song</button>
+  </div>
+</dialog>
+
+<div id="audio-container">
+  <div id="audio-player"></div>
+</div>
 
 <script src="js/app.js"></script>
 
