@@ -11,6 +11,9 @@ let streak = 0;
 let score = 0;
 let typingSeconds = 0;
 let typingTimerId;
+let finalScore = 0;
+let track = "";
+let scoreSaved = false;
 let socket;
 let lastSent = 0;
 let joined = false;
@@ -20,7 +23,7 @@ let playbackSpeedIndex = 3;
 function updateScoreDisplay() {
   let accuracy = 0;
   let wpm = 0;
-  let finalScore = 0;
+  finalScore = 0;
 
   if (totalTyped > 0) {
     accuracy = Math.round(correctLetters / totalTyped * 100);
@@ -47,7 +50,37 @@ function resetScore() {
   clearInterval(typingTimerId);
   typingTimerId = undefined;
   typingSeconds = 0;
+  scoreSaved = false;
   updateScoreDisplay();
+}
+
+function saveScore() {
+  if (scoreSaved) {
+    return;
+  }
+
+  scoreSaved = true;
+
+  fetch("/api/scores", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      songTitle: track,
+      score: finalScore
+    })
+  }).then(response => {
+    return response.json().then(data => {
+      if (response.status === 200) {
+        document.getElementById("message").textContent = "Score saved";
+      } else {
+        scoreSaved = false;
+        document.getElementById("message").textContent = data.error;
+      }
+    });
+  }).catch(error => {
+    scoreSaved = false;
+    document.getElementById("message").textContent = "Could not save score";
+  });
 }
 
 function trackTyping(typed) {
@@ -187,16 +220,18 @@ function startTimer() {
   currentIndex = -1;
   currentText = "";
   document.getElementById("typing-input").value = "";
+  document.getElementById("typing-input").disabled = false;
   document.getElementById("current-lyric").textContent = "Waiting for lyrics...";
 }
 
-function loadSong(track, artist) {
-  if (track.trim() === "") {
+function loadSong(songTitle, artist) {
+  if (songTitle.trim() === "") {
     document.getElementById("message").textContent = "Enter a song title";
     return;
   }
 
-  let params = new URLSearchParams({track: track, artist: artist});
+  track = songTitle;
+  let params = new URLSearchParams({track: songTitle, artist: artist});
 
   fetch("/api/lyrics?" + params.toString()).then(response => {
     return response.json().then(data => {
@@ -284,6 +319,11 @@ function loadYouTubeVideo(track, artist) {
             }
             if (event.data === YT.PlayerState.ENDED) {
               clearInterval(timerId);
+              clearInterval(typingTimerId);
+              typingTimerId = undefined;
+              typingInput.disabled = true;
+              updateScoreDisplay();
+              saveScore();
               sendFinish();
             }
           }

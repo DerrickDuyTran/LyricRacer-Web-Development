@@ -7,3 +7,9 @@ GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
 YOUTUBE_API_KEY=
 
 SESSION_SECRET=
+
+PGUSER=postgres
+PGHOST=localhost
+PGDATABASE=lyricracer
+PGPASSWORD=your_postgres_password
+PGPORT=5432
