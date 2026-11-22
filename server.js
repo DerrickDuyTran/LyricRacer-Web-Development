@@ -5,11 +5,26 @@ const express = require("express");
 const session = require("express-session");
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const {Pool} = require("pg");
 const app = express();
 const WebSocket = require("ws");
 
 const port = 3000;
 const hostname = "localhost";
+
+let pool = new Pool({
+  user: process.env.PGUSER,
+  host: process.env.PGHOST,
+  database: process.env.PGDATABASE,
+  password: process.env.PGPASSWORD,
+  port: process.env.PGPORT
+});
+
+pool.connect().then(() => {
+  console.log("Connected to database");
+});
+
+app.use(express.json());
 
 app.use(session({
   secret: process.env.SESSION_SECRET,
@@ -62,6 +77,36 @@ app.get("/api/me", (req, res) => {
       loggedIn: false
     });
   }
+});
+
+app.post("/api/scores", (req, res) => {
+  if (!req.user) {
+    res.status(401).json({error: "Sign in to save scores"});
+    return;
+  }
+
+  let songTitle = req.body.songTitle;
+  let score = req.body.score;
+
+  if (typeof songTitle !== "string" || songTitle.length === 0 || !Number.isInteger(score)) {
+    res.status(400).json({error: "Invalid score data"});
+    return;
+  }
+
+  let user = req.user;
+
+  pool.query("SELECT google_id FROM users WHERE google_id = $1", [user.id]).then(result => {
+    if (result.rows.length === 0) {
+      return pool.query("INSERT INTO users (google_id, name) VALUES ($1, $2)", [user.id, user.name]);
+    }
+  }).then(() => {
+    return pool.query("INSERT INTO scores (user_id, song_title, score) VALUES ($1, $2, $3)", [user.id, songTitle, score]);
+  }).then(() => {
+    res.status(200).json({message: "Score saved"});
+  }).catch(error => {
+    console.log("Database error:", error.message);
+    res.status(500).json({error: "Could not save score"});
+  });
 });
 
 app.get("/logout", (req, res, next) => {
